@@ -2,29 +2,28 @@ package server
 
 import (
 	"context"
-	"fmt"
-	"net"
-	"net/http"
 
+	"github.com/D3rise/dchat/internal/interfaces"
+	"github.com/gin-gonic/gin"
 	"go.uber.org/fx"
-	"go.uber.org/zap"
 )
 
-func NewHTTPServer(lc fx.Lifecycle, mux *http.ServeMux, log *zap.Logger) *http.Server {
-	srv := &http.Server{Addr: ":4000", Handler: mux}
+type Server struct {
+	Gin *gin.Engine
+}
+
+func NewHandler(lc fx.Lifecycle, envService interfaces.EnvService) Server {
+	r := gin.Default()
+	server := Server{
+		Gin: r,
+	}
+
 	lc.Append(fx.Hook{
 		OnStart: func(ctx context.Context) error {
-			ln, err := net.Listen("tcp", srv.Addr)
-			if err != nil {
-				return err
-			}
-			log.Info(fmt.Sprintf("Started listening on address %s", srv.Addr))
-			go srv.Serve(ln)
+			go r.Run(envService.GetListenAddr())
 			return nil
 		},
-		OnStop: func(ctx context.Context) error {
-			return srv.Shutdown(ctx)
-		},
 	})
-	return srv
+
+	return server
 }

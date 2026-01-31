@@ -1,31 +1,22 @@
 package main
 
 import (
-	"net/http"
-
-	"github.com/D3rise/dchat/internal/handlers"
+	"github.com/D3rise/dchat/internal/modules/echo"
+	"github.com/D3rise/dchat/internal/modules/env"
+	"github.com/D3rise/dchat/internal/modules/rtc"
 	"github.com/D3rise/dchat/internal/server"
 	"go.uber.org/fx"
-	"go.uber.org/fx/fxevent"
-	"go.uber.org/zap"
 )
 
 func main() {
 	fx.New(
-		fx.WithLogger(func(log *zap.Logger) fxevent.Logger {
-			return &fxevent.ZapLogger{Logger: log}
-		}),
+		env.Module,
+		rtc.Module,
+		echo.Module,
+
 		fx.Provide(
-			fx.Annotate(
-				server.NewServeMux,
-				fx.ParamTags(`group:"routes"`),
-			),
-			server.NewHTTPServer,
-			zap.NewExample,
+			server.NewHandler,
 		),
-		fx.Provide(
-			server.AsRoute(handlers.NewEchoHandler),
-		),
-		fx.Invoke(func(*http.Server) {}),
+		fx.Invoke(func(server.Server) {}),
 	).Run()
 }
