@@ -14,6 +14,14 @@ func NewProcessEnvService() interfaces.EnvService {
 
 type processEnvServiceImpl struct{}
 
+func (s *processEnvServiceImpl) GetTLSKeyPath() string {
+	return s.getValue(TLS_KEY_PATH)
+}
+
+func (s *processEnvServiceImpl) GetTLSCertPath() string {
+	return s.getValue(TLS_CERT_PATH)
+}
+
 func (s *processEnvServiceImpl) getValue(key EnvKey) string {
 	return os.Getenv(string(key))
 }

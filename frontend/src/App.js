@@ -34,49 +34,48 @@ function App() {
         userStreamRef.current = stream;
         setJoined(true);
 
-        const ws = new WebSocket('ws://localhost:8080/ws');
+        const ws = new WebSocket('wss://192.168.1.137:4000/rtc/ws');
         socketRef.current = ws;
 
         ws.onopen = () => {
           ws.send(JSON.stringify({
-            type: 'join',
-            room: roomName,
-            user: userName
+            _type: 'join_room',
+            data: {
+              room_id: roomName,
+              username: userName
+            }
           }));
         };
 
         ws.onmessage = (message) => {
           const payload = JSON.parse(message.data);
-          
-          if (payload.type === 'all users') {
-            const peers = [];
-            payload.users.forEach(userID => {
-              const peer = createPeer(userID, ws, stream);
-              peersRef.current.push({
-                peerID: userID,
+
+          if (payload._type === 'room_user_list') {
+            payload.data.users.forEach(username => {
+              const peer = createPeer(username, ws, stream);
+              const peerObj = {
+                peerID: username,
                 peer,
-              });
-              peers.push({
-                peerID: userID,
-                peer,
-              });
+              };
+              peersRef.current.push(peerObj);
+              setPeers(users => [...users, peerObj]);
             });
-            setPeers(peers);
           }
 
-          if (payload.type === 'user joined') {
-            const peer = addPeer(payload.signal, payload.callerID, stream);
-            peersRef.current.push({
-              peerID: payload.callerID,
+          if (payload._type === 'signal') {
+            const peer = addPeer(payload.data.signal, payload.data.username, stream);
+            const peerObj = {
+              peerID: payload.data.username,
               peer,
-            });
-            setPeers(users => [...users, { peerID: payload.callerID, peer }]);
+            };
+            peersRef.current.push(peerObj);
+            setPeers(users => [...users, peerObj]);
           }
 
-          if (payload.type === 'receiving returned signal') {
-            const item = peersRef.current.find(p => p.peerID === payload.id);
+          if (payload._type === 'returning_signal') {
+            const item = peersRef.current.find(p => p.peerID === payload.data.username);
             if (item) {
-              item.peer.signal(payload.signal);
+              item.peer.signal(payload.data.signal);
             }
           }
         };
@@ -84,36 +83,54 @@ function App() {
     }
   };
 
-  function createPeer(userToSignal, ws, stream) {
+  function createPeer(usernameToSignal, ws, stream) {
     const peer = new Peer({
       initiator: true,
       trickle: false,
       stream,
+      config: {
+        iceServers: [
+          { urls: 'stun:stun.l.google.com:19302' },
+          { urls: 'stun:stun1.l.google.com:19302' },
+        ]
+      }
     });
 
     peer.on("signal", signal => {
       ws.send(JSON.stringify({
-        type: 'sending signal',
-        userToSignal,
-        signal
+        _type: 'signal',
+        data: {
+          username: userName,
+          username_to_signal: usernameToSignal,
+          signal: JSON.stringify(signal)
+        }
       }));
     });
 
     return peer;
   }
 
-  function addPeer(incomingSignal, callerID, stream) {
+  function addPeer(incomingSignal, username, stream) {
     const peer = new Peer({
       initiator: false,
       trickle: false,
       stream,
+      config: {
+        iceServers: [
+          { urls: 'stun:stun.l.google.com:19302' },
+          { urls: 'stun:stun1.l.google.com:19302' },
+        ]
+      }
     });
 
     peer.on("signal", signal => {
       socketRef.current.send(JSON.stringify({
-        type: 'returning signal',
-        callerID,
-        signal
+        _type: 'returning_signal',
+        data: {
+          username: userName,
+          username_to_signal: username,
+          signal: JSON.stringify(signal)
+        }
       }));
     });
 
@@ -165,7 +182,7 @@ function App() {
               <div className="user-name">{userName} (You)</div>
             </div>
             {peers.map((peerObj, index) => (
-              <Audio key={index} peer={peerObj.peer} />
+              <Audio key={peerObj.peerID} peer={peerObj.peer} peerID={peerObj.peerID} />
             ))}
           </div>
 
@@ -187,17 +204,39 @@ const Audio = (props) => {
   const ref = useRef();
 
   useEffect(() => {
-    props.peer.on("stream", stream => {
+    const handleStream = (stream) => {
+      console.log("received stream from", props.peerID);
       if (ref.current) {
         ref.current.srcObject = stream;
       }
-    });
-  }, [props.peer]);
+    };
+
+    const handleTrack = (track, stream) => {
+      console.log("received track from", props.peerID);
+      if (ref.current) {
+        ref.current.srcObject = stream;
+      }
+    };
+
+    props.peer.on("stream", handleStream);
+    props.peer.on("track", handleTrack);
+
+    // simple-peer might have already received the stream
+    // although it's not public API, some versions expose _remoteStreams
+    if (props.peer._remoteStreams && props.peer._remoteStreams[0]) {
+      handleStream(props.peer._remoteStreams[0]);
+    }
+
+    return () => {
+      props.peer.off("stream", handleStream);
+      props.peer.off("track", handleTrack);
+    };
+  }, [props.peer, props.peerID]);
 
   return (
     <div className="user-node">
       <User size={40} />
-      <div className="user-name">Remote User</div>
+      <div className="user-name">{props.peerID || 'Remote User'}</div>
       <audio playsInline autoPlay ref={ref} style={{ display: 'none' }} />
     </div>
   );

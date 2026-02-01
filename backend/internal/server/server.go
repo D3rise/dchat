@@ -20,7 +20,16 @@ func NewHandler(lc fx.Lifecycle, envService interfaces.EnvService) Server {
 
 	lc.Append(fx.Hook{
 		OnStart: func(ctx context.Context) error {
-			go r.Run(envService.GetListenAddr())
+			addr := envService.GetListenAddr()
+			tlsCertPath := envService.GetTLSCertPath()
+			tlsKeyPath := envService.GetTLSKeyPath()
+
+			if tlsCertPath != "" && tlsKeyPath != "" {
+				go r.RunTLS(addr, envService.GetTLSCertPath(), envService.GetTLSKeyPath())
+			} else {
+				go r.Run(addr)
+			}
+
 			return nil
 		},
 	})
