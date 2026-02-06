@@ -12,7 +12,7 @@ type Server struct {
 	Gin *gin.Engine
 }
 
-func NewHandler(lc fx.Lifecycle, envService interfaces.EnvService) Server {
+func NewServer(lc fx.Lifecycle, envService interfaces.EnvService) Server {
 	r := gin.Default()
 	server := Server{
 		Gin: r,
@@ -25,7 +25,7 @@ func NewHandler(lc fx.Lifecycle, envService interfaces.EnvService) Server {
 			tlsKeyPath := envService.GetTLSKeyPath()
 
 			if tlsCertPath != "" && tlsKeyPath != "" {
-				go r.RunTLS(addr, envService.GetTLSCertPath(), envService.GetTLSKeyPath())
+				go r.RunTLS(addr, tlsCertPath, tlsKeyPath)
 			} else {
 				go r.Run(addr)
 			}
