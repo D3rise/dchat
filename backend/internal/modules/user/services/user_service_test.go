@@ -15,7 +15,12 @@ func Test_userServiceImpl_SignUp(t *testing.T) {
 		userRepoMock := NewMockUserRepository(ctrl)
 		service := NewUserService(userRepoMock)
 
-		userRepoMock.EXPECT().GetUserByUsername(gomock.Any(), "testUsername").Times(1).Return(nil, nil)
+		userRepoMock.
+			EXPECT().
+			GetUserByUsername(gomock.Any(), "testUsername").
+			Times(1).
+			Return(nil, nil)
+
 		userRepoMock.EXPECT().CreateUser(
 			gomock.Any(),
 			testutils.StructMatcher().Field("Username", "testUsername"),
