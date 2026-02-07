@@ -1,7 +1,7 @@
 package echo
 
 import (
-	"github.com/D3rise/dchat/internal/domain/server"
+	"github.com/D3rise/dchat/internal/infrastructure/server"
 	"github.com/D3rise/dchat/internal/modules/echo/services"
 	"go.uber.org/fx"
 )

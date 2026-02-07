@@ -1,11 +1,12 @@
 package main
 
 import (
-	"github.com/D3rise/dchat/internal/domain/database"
-	"github.com/D3rise/dchat/internal/domain/server"
+	"github.com/D3rise/dchat/internal/infrastructure/database"
+	server2 "github.com/D3rise/dchat/internal/infrastructure/server"
 	"github.com/D3rise/dchat/internal/modules/echo"
 	"github.com/D3rise/dchat/internal/modules/env"
 	"github.com/D3rise/dchat/internal/modules/rtc"
+	"github.com/D3rise/dchat/internal/modules/user"
 	"go.uber.org/fx"
 	"go.uber.org/fx/fxevent"
 	"go.uber.org/zap"
@@ -16,6 +17,7 @@ func main() {
 		env.Module,
 		rtc.Module,
 		echo.Module,
+		user.Module,
 
 		// Logger
 		fx.Provide(zap.NewExample),
@@ -28,8 +30,8 @@ func main() {
 		fx.Invoke(func(database.Database) {}),
 
 		// Server
-		fx.Provide(server.NewServer),
-		fx.Decorate(server.DecorateServerWithLogger),
-		fx.Invoke(func(server.Server) {}),
+		fx.Provide(server2.NewServer),
+		fx.Decorate(server2.DecorateServerWithLogger),
+		fx.Invoke(func(server2.Server) {}),
 	).Run()
 }

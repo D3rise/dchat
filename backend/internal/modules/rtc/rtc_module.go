@@ -1,7 +1,7 @@
 package rtc
 
 import (
-	"github.com/D3rise/dchat/internal/domain/server"
+	"github.com/D3rise/dchat/internal/infrastructure/server"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
 )

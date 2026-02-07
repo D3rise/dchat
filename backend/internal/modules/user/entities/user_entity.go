@@ -11,4 +11,7 @@ type UserEntity struct {
 	CreatedAt time.Time
 	UpdatedAt time.Time
 	DeletedAt gorm.DeletedAt `gorm:"index"`
+
+	Username     string `gorm:"not null;unique"`
+	PasswordHash string `gorm:"not null"`
 }
